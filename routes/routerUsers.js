@@ -214,6 +214,32 @@ router.get("/friends", checkAuth, (req, res, next) => {
         });
 });
 
+router.get("/search/contacts", checkAuth, (req, res, next) => {
+
+    let textContact = req.query.q;
+    let arrayContacts = [];
+
+    User.find({})
+        .exec()
+        .then(user => {
+            user.forEach( item => {
+               if (item.login === req.userData.login) { return; }
+               if (item.login.indexOf(textContact) === 0 && textContact.length > 0) {
+                   arrayContacts.push({ login: item.login });
+               }
+            });
+            res.status(200).json({
+                contacts: arrayContacts
+            });
+        })
+        .catch(err => {
+            console.log(err);
+            res.status(500).json({
+                error: err
+            });
+        });
+});
+
 router.post("/signup", (req, res, next) => {
     User.find({login: req.body.login})
         .exec()
@@ -285,7 +311,7 @@ router.post("/login", (req, res, next) => {
                         },
                         SECRET_WORD,
                         {
-                            expiresIn: 60 * 6
+                            expiresIn: 60 * 20
                         }
                     );
                     return res.status(200).json({
@@ -331,8 +357,11 @@ router.post("/friend", checkAuth, (req, res, next) => {
 
             if (add) {
                 User.findOneAndUpdate({login: req.body.friend}, {$push: {friendRequest: {login: req.userData.login}}})
-                    .exec().then(user => {
-                    res.send(user);
+                    .exec().then(() => {
+                    User.findById(req.userData.userId)
+                        .exec().then(user => {
+                        res.send(user);
+                    });
                 })
                     .catch(err => {
                         res.status(500).json({
