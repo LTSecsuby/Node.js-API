@@ -218,19 +218,35 @@ router.get("/search/contacts", checkAuth, (req, res, next) => {
 
     let textContact = req.query.q;
     let arrayContacts = [];
+    let isFriendReq = false;
 
     User.find({})
         .exec()
         .then(user => {
             user.forEach( item => {
                if (item.login === req.userData.login) { return; }
-               if (item.login.indexOf(textContact) === 0 && textContact.length > 0) {
+               isFriendReq = false;
+               item.friendRequest.forEach(login => {
+                   if (login.login === req.userData.login) { isFriendReq = true; }
+               });
+               if (item.login.toLowerCase().indexOf(textContact.toLowerCase()) === 0 && textContact.length > 0 && !isFriendReq) {
                    arrayContacts.push({ login: item.login });
                }
             });
-            res.status(200).json({
-                contacts: arrayContacts
-            });
+            User.findById(req.userData.userId)
+                .exec()
+                .then(user => {
+                    user.contacts = arrayContacts;
+                    res.status(200).json({
+                        user: user
+                    });
+                })
+                .catch(err => {
+                    console.log(err);
+                    res.status(500).json({
+                        error: err
+                    });
+                });
         })
         .catch(err => {
             console.log(err);

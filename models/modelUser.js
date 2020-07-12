@@ -21,6 +21,7 @@ const userSchema = mongoose.Schema({
     friendRequest: [{
         login: String
     }],
+    contacts: [{}],
     profilePicture: Buffer
     },
     {timestamp: true}
