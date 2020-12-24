@@ -6,7 +6,8 @@ const userRoutes = require('./routes/routerUsers');
 
 const api = express();
 
-mongoose.connect('mongodb://localhost:27017/users-db', {useUnifiedTopology: true, useNewUrlParser: true});
+mongoose.connect(`mongodb+srv://root:rootroot123@cluster0.51os8.mongodb.net/db?retryWrites=true&w=majority`, {useUnifiedTopology: true, useNewUrlParser: true});
+//mongoose.connect('mongodb://localhost:27017/users-db', {useUnifiedTopology: true, useNewUrlParser: true});
 
 
 api.use(bodyParser.urlencoded({ extended: false }));

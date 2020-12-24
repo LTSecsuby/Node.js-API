@@ -16,10 +16,14 @@ const userSchema = mongoose.Schema({
         required: true
     },
     addedFriends: [{
-        login: String
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     }],
     friendRequest: [{
-        login: String
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     }],
     contacts: [{}],
     profilePicture: Buffer

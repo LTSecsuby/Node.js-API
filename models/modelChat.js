@@ -1,22 +1,22 @@
 const mongoose = require('mongoose');
 
-const messageSchema = mongoose.Schema({
+const chatSchema = mongoose.Schema({
 
     _id: mongoose.Schema.Types.ObjectId,
-    text: {
+    chatName: {
         type: String,
         required: true
     },
-    owner: {
+    participants: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
-    },
-    recipient: {
+    }],
+    arrayMsg: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
+        ref: 'Msg',
+        required: false
+    }],
     created: {
         type: Date,
         default: Date.now
@@ -26,4 +26,4 @@ const messageSchema = mongoose.Schema({
 );
 //mongoose.set('useFindAndModify', false);
 
-module.exports = mongoose.model('Message', messageSchema);
+module.exports = mongoose.model('Chat', chatSchema);

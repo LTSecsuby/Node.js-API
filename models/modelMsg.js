@@ -1,20 +1,14 @@
 const mongoose = require('mongoose');
 
-const messageSchema = mongoose.Schema({
+const msgSchema = mongoose.Schema({
 
     _id: mongoose.Schema.Types.ObjectId,
     text: {
         type: String,
         required: true
     },
-    owner: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    recipient: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+    currentChat: {
+        type: String,
         required: true
     },
     created: {
@@ -26,4 +20,4 @@ const messageSchema = mongoose.Schema({
 );
 //mongoose.set('useFindAndModify', false);
 
-module.exports = mongoose.model('Message', messageSchema);
+module.exports = mongoose.model('Msg', msgSchema);
