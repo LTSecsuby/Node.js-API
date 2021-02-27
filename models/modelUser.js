@@ -25,7 +25,6 @@ const userSchema = mongoose.Schema({
         ref: 'User',
         required: true
     }],
-    contacts: [{}],
     profilePicture: Buffer
     },
     {timestamp: true}

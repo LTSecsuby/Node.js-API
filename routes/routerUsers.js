@@ -19,8 +19,9 @@ router.post("/friend/message", checkAuth, (req, res, next) => {
     let addMsg = false;
     User.findById(req.userData.userId).exec().then((user) => {
         if (user.addedFriends.length !== 0) {
-            user.addedFriends.find((elem) => {
-                if (JSON.stringify(elem._id) === JSON.stringify(req.body.friend_id)) {
+            user.addedFriends.find((id) => {
+                console.log('ID', id);
+                if (JSON.stringify(id) === JSON.stringify(req.body.friend_id)) {
                     addMsg = true;
                 }
             });
@@ -34,7 +35,25 @@ router.post("/friend/message", checkAuth, (req, res, next) => {
                     recipient: friend
                 });
                 post.save().then(() => {
-                    res.status(200).json(user);
+                    const arrayMessagesFriend = [];
+                    Message.find({}).exec().then(messages => {
+                        messages.find((message) => {
+                            if ((JSON.stringify(message.owner._id) === JSON.stringify(req.body.friend_id) && JSON.stringify(message.recipient._id) === JSON.stringify(req.userData.userId))
+                                || (JSON.stringify(message.recipient._id) === JSON.stringify(req.body.friend_id) && JSON.stringify(message.owner._id) === JSON.stringify(req.userData.userId))) {
+                                if (JSON.stringify(message.recipient._id) === JSON.stringify(req.userData.userId)) {
+                                    message.markRead = true;
+                                    message.save();
+                                }
+                                arrayMessagesFriend.push(message);
+                            }
+                        });
+                        res.status(200).json(arrayMessagesFriend);
+                    }).catch(err => {
+                        console.log(err);
+                        res.status(500).json({
+                            error: err
+                        });
+                    });
                 }).catch(err => {
                     console.log(err);
                     res.status(500).json({
@@ -57,10 +76,38 @@ router.post("/friend/messages", checkAuth, (req, res, next) => {
         messages.find((message) => {
             if ((JSON.stringify(message.owner._id) === JSON.stringify(req.body.friend_id) && JSON.stringify(message.recipient._id) === JSON.stringify(req.userData.userId))
                 || (JSON.stringify(message.recipient._id) === JSON.stringify(req.body.friend_id) && JSON.stringify(message.owner._id) === JSON.stringify(req.userData.userId))) {
+                if (JSON.stringify(message.recipient._id) === JSON.stringify(req.userData.userId)) {
+                    message.markRead = true;
+                    message.save();
+                }
                 arrayMessagesFriend.push(message);
             }
         });
         res.status(200).json(arrayMessagesFriend);
+    }).catch(err => {
+        console.log(err);
+        res.status(500).json({
+            error: err
+        });
+    });
+});
+//работает!
+router.get("/friends", checkAuth, (req, res, next) => {
+    const arrayFriends = [];
+    let isFriend = false;
+    User.find({}).exec().then(users => {
+        users.find((user) => {
+            if (JSON.stringify(user._id) === JSON.stringify(req.userData.userId)) { return; }
+            isFriend = false;
+            user.addedFriends.forEach(id => {
+                console.log('ID', id);
+                if (JSON.stringify(id) === JSON.stringify(req.userData.userId)) { isFriend = true; }
+                if (isFriend) {
+                    arrayFriends.push(user);
+                }
+            });
+        });
+        res.status(200).json(arrayFriends);
     }).catch(err => {
         console.log(err);
         res.status(500).json({
@@ -82,30 +129,19 @@ router.get("/profile", checkAuth, (req, res, next) => {
     });
 });
 //работает!
-router.get("/search/contacts", checkAuth, (req, res, next) => {
-
-    let textContact = req.query.q;
-    let arrayContacts = [];
-    let isFriendReq = false;
-
-    User.find({}).exec().then(users => {
-        users.forEach(item => {
-            if (JSON.stringify(item._id) === JSON.stringify(req.userData.userId)) { return; }
-            isFriendReq = false;
-            item.friendRequest.forEach(elem => {
-                if (JSON.stringify(elem._id) === JSON.stringify(req.userData.userId)) { isFriendReq = true; }
-            });
-            if (item.login.toLowerCase().indexOf(textContact.toLowerCase()) === 0 && textContact.length > 0 && !isFriendReq) {
-                arrayContacts.push(item);
-            }
-        });
-        User.findById(req.userData.userId).exec().then(user => {
-            user.contacts = arrayContacts;
-            res.status(200).json(user);
-        }).catch(err => {
-            console.log(err);
-            res.status(500).json({
-                error: err
+router.get("/friend/requests", checkAuth, (req, res, next) => {
+    let arrayRequests = [];
+    User.findById(req.userData.userId).exec().then(user => {
+        user.friendRequest.forEach(id => {
+            User.findById(id).exec().then((friend) => {
+                arrayRequests.push(friend);
+            }).catch(err => {
+                console.log(err);
+                res.status(500).json({
+                    error: err
+                });
+            }).finally(() => {
+                res.status(200).json(arrayRequests);
             });
         });
     }).catch(err => {
@@ -113,6 +149,31 @@ router.get("/search/contacts", checkAuth, (req, res, next) => {
         res.status(500).json({
             error: err
         });
+    });
+});
+
+router.get("/search/contacts", checkAuth, (req, res, next) => {
+    let textContact = req.query.q;
+    let arrayContacts = [];
+    let isFriendReq = false;
+    User.find({}).exec().then(users => {
+        users.forEach(item => {
+            if (JSON.stringify(item._id) === JSON.stringify(req.userData.userId)) { return; }
+            isFriendReq = false;
+            item.friendRequest.forEach(id => {
+                if (JSON.stringify(id) === JSON.stringify(req.userData.userId)) { isFriendReq = true; }
+            });
+            if (item.login.toLowerCase().indexOf(textContact.toLowerCase()) === 0 && textContact.length > 0 && !isFriendReq) {
+                arrayContacts.push(item);
+            }
+        });
+    }).catch(err => {
+        console.log(err);
+        res.status(500).json({
+            error: err
+        });
+    }).finally(() => {
+        res.status(200).json(arrayContacts);
     });
 });
 //работает!
@@ -150,7 +211,7 @@ router.post("/signup", (req, res, next) => {
         }
     });
 });
-//работает!
+
 router.post("/login", (req, res, next) => {
     User.find({login: req.body.login}).exec().then().catch(err => {
         console.log(err);
@@ -159,7 +220,7 @@ router.post("/login", (req, res, next) => {
         });
     });
     User.findOne({login: req.body.login}).exec().then(user => {
-        if (user.length < 1) {
+        if (user === null || user.length < 1) {
             return res.status(401).json({
                 message: "failed"
             });
@@ -194,16 +255,18 @@ router.post("/login", (req, res, next) => {
 router.post("/friend", checkAuth, (req, res, next) => {
     let add = true;
     User.findById(req.body.friend_id).exec().then((friend) => {
-        friend.friendRequest.find((elem) => {
-            if (JSON.stringify(elem._id) === JSON.stringify(req.userData.userId)) { add = false; }
+        friend.friendRequest.find((id) => {
+            console.log('ID', id);
+            if (JSON.stringify(id) === JSON.stringify(req.userData.userId)) { add = false; }
         });
-        friend.addedFriends.find((elem) => {
-            if (JSON.stringify(elem._id) === JSON.stringify(req.userData.userId)) { add = false; }
+        friend.addedFriends.find((id) => {
+            console.log('ID', id);
+            if (JSON.stringify(id) === JSON.stringify(req.userData.userId)) { add = false; }
         });
         if (JSON.stringify(req.body.friend_id) === JSON.stringify(req.userData.userId)) { add = false; }
         if (add) {
             User.findById(req.userData.userId).exec().then(user => {
-                friend.friendRequest.push(user);
+                friend.friendRequest.push(user._id);
                 friend.save().then(() => {
                     res.status(200).json(user);
                 });
@@ -220,43 +283,48 @@ router.post("/friend", checkAuth, (req, res, next) => {
         });
     });
 });
-//работает!
+
 router.post("/friend/add", checkAuth, (req, res, next) => {
-    let add = true;
-    User.findById(req.userData.userId).exec().then((user) => {
-        if (user.addedFriends.length !== 0) {
-            user.addedFriends.find((elem) => {
-                if (JSON.stringify(elem._id) === JSON.stringify(req.body.friend_id)) {
-                    User.findById(req.body.friend_id).exec().then(friend => {
-                        User.findByIdAndUpdate(req.userData.userId, {$pull: {friendRequest: friend}}).exec().then();
-                        add = false;
-                    });
-                }
-            });
+    const friendId = req.body.friend_id;
+    const userId = req.userData.userId;
+    if (friendId === userId) {
+        res.status(409).json({
+            error: 'you can t add yourself'
+        });
+    }
+    User.findById(friendId).exec().then(friend => {
+        if (!friend.addedFriends.includes(userId)) {
+            friend.addedFriends.push(userId);
         }
-        if (add) {
-            User.findByIdAndUpdate(req.body.friend_id, {$push: user}).exec().then((friend => {
-                User.findByIdAndUpdate(req.userData.userId, {$pull: {friendRequest: friend}}).exec().then();
-                User.findByIdAndUpdate(req.userData.userId, {$push: {addedFriends: friend}}).exec().then(() => {
-                    User.findById(req.userData.userId).exec().then(user => {
-                        res.status(200).json(user);
-                    });
-                }).catch(err => {
-                    console.log(err);
-                    res.status(500).json({
-                        error: err
-                    });
-                });
-            }));
+        friend.save();
+    }).catch(err => {
+        console.log(err);
+        res.status(500).json({
+            error: err
+        });
+    });
+    User.findById(userId).exec().then(user => {
+        if (!user.addedFriends.includes(friendId)) {
+            user.addedFriends.push(friendId);
         }
-        if (!add) res.send('friend not added');
+        if (user.friendRequest.includes(friendId)) {
+            user.friendRequest.pull(friendId);
+        }
+        user.save().then(() => {
+            res.status(200).json(user);
+        });
+    }).catch(err => {
+        console.log(err);
+        res.status(500).json({
+            error: err
+        });
     });
 });
-//работает!
+
 router.post("/friend/skip", checkAuth, (req, res, next) => {
     User.findById(req.userData.userId).exec().then((user) => {
         if (user.friendRequest.length !== 0) {
-            user.friendRequest = user.friendRequest.filter(elem => JSON.stringify(elem._id) !== JSON.stringify(req.body.friend_id));
+            user.friendRequest = user.friendRequest.filter(id => JSON.stringify(id) !== JSON.stringify(req.body.friend_id));
             user.save().then(() => {
                 res.status(200).json(user);
             });
@@ -269,25 +337,33 @@ router.post("/friend/skip", checkAuth, (req, res, next) => {
         });
     });
 });
-//работает!
+
 router.post("/friend/delete", checkAuth, (req, res, next) => {
-    User.findById(req.userData.userId).exec().then((user) => {
-        if (user.addedFriends.length !== 0) {
-            User.findById(req.body.friend_id).exec().then((friend) => {
-                friend.addedFriends = friend.addedFriends.filter(elem => JSON.stringify(elem._id) !== JSON.stringify(req.userData.userId));
-                friend.save().then(() => {
-                    user.addedFriends = user.addedFriends.filter(elem => JSON.stringify(elem._id) !== JSON.stringify(req.body.friend_id));
-                    user.save().then(() => {
-                        res.status(200).json(user);
-                    });
-                });
-            }).catch(err => {
-                console.log(err);
-                res.status(500).json({
-                    error: err
-                });
-            });
+    const friendId = req.body.friend_id;
+    const userId = req.userData.userId;
+    if (friendId === userId) {
+        res.status(409).json({
+            error: 'you can t delete yourself'
+        });
+    }
+    User.findById(friendId).exec().then(friend => {
+        if (friend.addedFriends.includes(userId)) {
+            friend.addedFriends.pull(userId);
         }
+        friend.save();
+    }).catch(err => {
+        console.log(err);
+        res.status(500).json({
+            error: err
+        });
+    });
+    User.findById(userId).exec().then(user => {
+        if (user.addedFriends.includes(friendId)) {
+            user.addedFriends.pull(friendId);
+        }
+        user.save().then(() => {
+            res.status(200).json(user);
+        });
     }).catch(err => {
         console.log(err);
         res.status(500).json({

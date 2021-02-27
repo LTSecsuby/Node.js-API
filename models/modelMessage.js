@@ -20,6 +20,10 @@ const messageSchema = mongoose.Schema({
     created: {
         type: Date,
         default: Date.now
+    },
+    markRead: {
+        type: Boolean,
+        default: false
     }
     },
     {timestamp: true}
